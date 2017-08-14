@@ -3,6 +3,7 @@
 
 import numpy as np
 import operator
+from os import listdir
 
 
 def createDataSet():
@@ -69,7 +70,53 @@ def autoNum(dataSet):
     minValue = dataSet.min(axis=0)  # 对每一列进行min
     maxValue = dataSet.max(axis=0)
     mRange = maxValue - minValue
-    m = dataSet.shape[0]    #数据行数
-    normDataSet = dataSet-np.tile(minValue,(m,1))
-    normDataSet = normDataSet/np.tile(mRange,(m,1)) #numpy中矩阵除法要用solve，这里就是普通的除法
-    return normDataSet,mRange,minValue
+    m = dataSet.shape[0]  # 数据行数
+    normDataSet = dataSet - np.tile(minValue, (m, 1))
+    normDataSet = normDataSet / np.tile(mRange, (m, 1))  # numpy中矩阵除法要用solve，这里就是普通的除法
+    return normDataSet, mRange, minValue
+
+
+def img2vector(filename):
+    """
+    将该文件内的所有数字32x32个，转化为1x1024的向量
+    :param filename: 文件名
+    :return: 转化为1x1024的array
+    """
+    returnVect = np.zeros((1, 1024))
+    fr = open(filename)
+    for i in range(32):
+        line = fr.readline()
+        for j in range(32):
+            returnVect[0, 32 * i + j] = int(line[j])
+    return returnVect
+
+
+def handWritingTest():
+    """
+    识别手写数字，数据在文件夹内
+    :return:
+    """
+    labels = []
+    trainDirs = listdir('trainingDigits')
+    trainCount = len(trainDirs)
+    trainMat = np.zeros((trainCount, 1024))
+    for i in range(trainCount):
+        filename = trainDirs[i]
+        fileLabel = filename.strip().split('_')[0]
+        labels.append(int(fileLabel))  # 从文件名中取出对应的分类类别，存入labels
+        reVector = img2vector('trainingDigits/%s' % filename)
+        trainMat[int(i), :] = reVector[0, :]
+
+    testDirs = listdir('testDigits')
+    mError = 0
+    testCount = len(testDirs)
+    for i in range(testCount):
+        filename = testDirs[i]
+        testLabel = int(filename.strip().split('_')[0])
+        testVector = img2vector('testDigits/%s' % filename)
+        testAns = int(classify0(testVector, trainMat, labels, 5))
+        print 'the %s number is %s and the test comes out %d' % ((i), (testLabel), testAns)
+        if testAns != testLabel:
+            mError += 1
+    print 'Error cases number is', mError
+    print 'Error rate is', mError * 1.0 / len(testDirs)
